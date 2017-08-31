@@ -324,7 +324,12 @@
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": { "Fn::GetAtt" : [ "SupportVPC", "CidrBlock" ] }
+                        "CidrIp": {
+                            "Fn::GetAtt": [
+                                "SupportVPC",
+                                "CidrBlock"
+                            ]
+                        }
                     },
                     {
                         "IpProtocol": "tcp",
@@ -347,7 +352,7 @@
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": "194.100.27.17/32"
+                  º"CidrIp": "194.100.27.17/32"
                     }
                 ]
             }
@@ -436,39 +441,38 @@
     "Outputs": {
         "BastionHostIP": {
             "Value": {
-                            "Fn::GetAtt": [
-                                "BastionEC2Instance",
-                                "PublicIp"
-                            ]
-               
+                "Fn::GetAtt": [
+                    "BastionEC2Instance",
+                    "PublicIp"
+                ]
             },
             "Description": "Bastion host IP, use this for SSH"
         },
         "JenkinsPublicAddress": {
-            "Value": {    "Fn::Join": [
-                "",
-                [
-                    "http://",
-                    {
-                        "Fn::GetAtt": [
-                            "JenkinsEC2Instance",
-                            "PublicIp"
-                        ]
-                    },
-                    ":8080"
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "JenkinsEC2Instance",
+                                "PublicIp"
+                            ]
+                        },
+                        ":8080"
+                    ]
                 ]
-            ]
             },
             "Description": "Jenkins public address"
         },
         "JenkinsInternalIP": {
             "Value": {
-                            "Fn::GetAtt": [
-                                "JenkinsEC2Instance",
-                                "PrivateIp"
-                            ]
-                        }
-            ,
+                "Fn::GetAtt": [
+                    "JenkinsEC2Instance",
+                    "PrivateIp"
+                ]
+            },
             "Description": "Use for testing SSH"
         }
     }

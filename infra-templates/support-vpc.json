@@ -292,13 +292,23 @@
                 }
             }
         },
-        "IPAddress": {
+        "JenkinsIPAddress": {
             "Type": "AWS::EC2::EIP",
             "DependsOn": "AttachGateway",
             "Properties": {
                 "Domain": "vpc",
                 "InstanceId": {
                     "Ref": "JenkinsEC2Instance"
+                }
+            }
+        },
+        "BastionIPAddress": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "Domain": "vpc",
+                "InstanceId": {
+                    "Ref": "BastionEC2Instance"
                 }
             }
         },
@@ -314,13 +324,30 @@
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": "213.214.136.59/32"
+                        "CidrIp": { "Fn::GetAtt" : [ "SupportVPC", "CidrBlock" ] }
                     },
                     {
                         "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
                         "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "BastionSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "SupportVPC"
+                },
+                "GroupDescription": "Enable SSH access for Bastion",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "194.100.27.17/32"
                     }
                 ]
             }
@@ -364,25 +391,85 @@
                     }
                 ]
             }
+        },
+        "BastionEC2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "KeyName": {
+                    "Ref": "SupportVPCKeyName"
+                },
+                "ImageId": "ami-0d063c6b",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    },
+                    {
+                        "Key": "PythiaPurpose",
+                        "Value": "Bastion"
+                    }
+                ],
+                "NetworkInterfaces": [
+                    {
+                        "GroupSet": [
+                            {
+                                "Ref": "BastionSG"
+                            }
+                        ],
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "DeleteOnTermination": "true",
+                        "SubnetId": {
+                            "Ref": "Subnet"
+                        }
+                    }
+                ]
+            }
         }
     },
     "Outputs": {
-        "URL": {
+        "BastionHostIP": {
             "Value": {
-                "Fn::Join": [
-                    "",
-                    [
-                        "http://",
-                        {
                             "Fn::GetAtt": [
-                                "JenkinsEC2Instance",
+                                "BastionEC2Instance",
                                 "PublicIp"
                             ]
-                        }
-                    ]
-                ]
+               
             },
-            "Description": "Newly created application URL"
+            "Description": "Bastion host IP, use this for SSH"
+        },
+        "JenkinsPublicAddress": {
+            "Value": {    "Fn::Join": [
+                "",
+                [
+                    "http://",
+                    {
+                        "Fn::GetAtt": [
+                            "JenkinsEC2Instance",
+                            "PublicIp"
+                        ]
+                    },
+                    ":8080"
+                ]
+            ]
+            },
+            "Description": "Jenkins public address"
+        },
+        "JenkinsInternalIP": {
+            "Value": {
+                            "Fn::GetAtt": [
+                                "JenkinsEC2Instance",
+                                "PrivateIp"
+                            ]
+                        }
+            ,
+            "Description": "Use for testing SSH"
         }
     }
 }

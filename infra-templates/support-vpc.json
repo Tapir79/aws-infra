@@ -191,8 +191,8 @@
                 "Egress": "false",
                 "CidrBlock": "0.0.0.0/0",
                 "PortRange": {
-                    "From": "80",
-                    "To": "80"
+                    "From": "8080",
+                    "To": "8080"
                 }
             }
         },
@@ -242,8 +242,8 @@
                 "Egress": "true",
                 "CidrBlock": "0.0.0.0/0",
                 "PortRange": {
-                    "From": "80",
-                    "To": "80"
+                    "From": "8080",
+                    "To": "8080"
                 }
             }
         },
@@ -352,7 +352,7 @@
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                  º"CidrIp": "194.100.27.17/32"
+                        "CidrIp": "194.100.27.17/32"
                     }
                 ]
             }

@@ -3,7 +3,7 @@
 - hosts: tag_Purpose_Bastion
   become: true
   become_user: root
-  
+
 # Shared tools for all instances in Support VPC
 - hosts: tag_Environment_Support
   become: true
@@ -34,17 +34,17 @@
       - git      # allows working with git repositories
 
    - name: Download NodeJS setup script
-     get_url: url=https://rpm.nodesource.com/setup_8.x 
+     get_url: url=https://rpm.nodesource.com/setup_8.x
               dest=/tmp/
               checksum=sha256:63f1e0954f8c332c9f33ef71ce7ee5f71b5f5f2b8663dee699048607986b3dcc
               mode=0755
 
    - name: Run NodeJS setup script
      command: /tmp/setup_8.x
-  
+
    - name: Install NodeJS+npm
      package: name=nodejs state=present
-  
+
    - name: Install Jenkins LTS release RPM repository
      get_url: url=http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
               dest=/etc/yum.repos.d/jenkins.repo
@@ -55,15 +55,30 @@
 
    - name: Install Jenkins LTS
      package: name=jenkins state=present
-  
-   - name: Allow Jenkins to accept connections through firewall
+
+   - name: Open port 8080 (FirewallD)
      command: firewall-cmd --zone=public --add-port=8080/tcp --permanent
+
+   - name: Allow HTTP service traffic (FirewallD)
      command: firewall-cmd --zone=public --add-service=http --permanent
-     command: firewall-cmd --reload
-  
+
+   - name: Set eth0 as public interface (FirewallD)
+     command: firewall-cmd --zone=public --change-interface=eth0 --permanent
+
+   - name: Persist interface zone binding (FirewallD)
+     lineinfile: dest=/etc/sysconfig/network-scripts/ifcfg-eth0
+                 regexp='^ZONE='
+                 line='ZONE="public"'
+
+   - name: Restart network service to allow FirewallD restart to function properly
+     service: name=network state=restarted enabled=yes
+
+   - name: Restart firewall to enable all configuration changes (FirewallD)
+     service: name=firewalld state=restarted enabled=yes
+
    - name: Set Jenkins JVM options
      lineinfile: dest=/etc/sysconfig/jenkins
-                 regexp='^SELINUX='
+                 regexp='^JENKINS_JAVA_OPTION='
                  line=JENKINS_JAVA_OPTIONS="-server -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true"
 
    - name: Enable Jenkins start on boot and start the service

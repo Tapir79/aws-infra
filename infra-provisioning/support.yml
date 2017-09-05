@@ -1,0 +1,70 @@
+# Provision bastion host first to ensure successful provisioning of everything else
+# Doesn't currently actually provision anything, but eventually probably will
+- hosts: tag_Purpose_Bastion
+  become: true
+  become_user: root
+  
+# Shared tools for all instances in Support VPC
+- hosts: tag_Environment_Support
+  become: true
+  become_user: root
+  tasks:
+   - name: Install EPEL release repository and useful commandline utilities
+     package: name={{item}} state=present
+     with_items:
+      - wget
+      - firewalld
+   - name: Enable FirewallD
+     service: name=firewalld state=started enabled=yes
+
+# Tools required for Jenkins builds
+- hosts: tag_Purpose_Jenkins_master
+  become: true
+  become_user: root
+
+  roles:
+   - { role: ansiblebit.oracle-java, oracle_java_set_as_default: yes }  # Install latest Oracle JDK
+
+  tasks:
+   - name: Install all build related tools needed for Pythia development
+     package: name={{item}} state=present
+     with_items:
+      - gcc-c++  # prerequisite for npm native packages
+      - make     # required for npm native packages and main Jenkinsfile integration
+      - git      # allows working with git repositories
+
+   - name: Download NodeJS setup script
+     get_url: url=https://rpm.nodesource.com/setup_8.x 
+              dest=/tmp/
+              checksum=sha256:63f1e0954f8c332c9f33ef71ce7ee5f71b5f5f2b8663dee699048607986b3dcc
+              mode=0755
+
+   - name: Run NodeJS setup script
+     command: /tmp/setup_8.x
+  
+   - name: Install NodeJS+npm
+     package: name=nodejs state=present
+  
+   - name: Install Jenkins LTS release RPM repository
+     get_url: url=http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+              dest=/etc/yum.repos.d/jenkins.repo
+
+   - name: Import Jenkins RPM key
+     rpm_key: key=https://jenkins-ci.org/redhat/jenkins-ci.org.key
+              state=present
+
+   - name: Install Jenkins LTS
+     package: name=jenkins state=present
+  
+   - name: Allow Jenkins to accept connections through firewall
+     command: firewall-cmd --zone=public --add-port=8080/tcp --permanent
+     command: firewall-cmd --zone=public --add-service=http --permanent
+     command: firewall-cmd --reload
+  
+   - name: Set Jenkins JVM options
+     lineinfile: dest=/etc/sysconfig/jenkins
+                 regexp='^SELINUX='
+                 line=JENKINS_JAVA_OPTIONS="-server -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true"
+
+   - name: Enable Jenkins start on boot and start the service
+     service: name=jenkins state=started enabled=yes

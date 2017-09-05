@@ -163,135 +163,6 @@
                 }
             }
         },
-        "NetworkAcl": {
-            "Type": "AWS::EC2::NetworkAcl",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "SupportVPC"
-                },
-                "Tags": [
-                    {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
-                    }
-                ]
-            }
-        },
-        "InboundHTTPNetworkAclEntry": {
-            "Type": "AWS::EC2::NetworkAclEntry",
-            "Properties": {
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                },
-                "RuleNumber": "100",
-                "Protocol": "6",
-                "RuleAction": "allow",
-                "Egress": "false",
-                "CidrBlock": "0.0.0.0/0",
-                "PortRange": {
-                    "From": "8080",
-                    "To": "8080"
-                }
-            }
-        },
-        "InboundSSHNetworkAclEntry": {
-            "Type": "AWS::EC2::NetworkAclEntry",
-            "Properties": {
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                },
-                "RuleNumber": "101",
-                "Protocol": "6",
-                "RuleAction": "allow",
-                "Egress": "false",
-                "CidrBlock": "0.0.0.0/0",
-                "PortRange": {
-                    "From": "22",
-                    "To": "22"
-                }
-            }
-        },
-        "InboundResponsePortsNetworkAclEntry": {
-            "Type": "AWS::EC2::NetworkAclEntry",
-            "Properties": {
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                },
-                "RuleNumber": "102",
-                "Protocol": "6",
-                "RuleAction": "allow",
-                "Egress": "false",
-                "CidrBlock": "0.0.0.0/0",
-                "PortRange": {
-                    "From": "1024",
-                    "To": "65535"
-                }
-            }
-        },
-        "OutBoundHTTPNetworkAclEntry": {
-            "Type": "AWS::EC2::NetworkAclEntry",
-            "Properties": {
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                },
-                "RuleNumber": "100",
-                "Protocol": "6",
-                "RuleAction": "allow",
-                "Egress": "true",
-                "CidrBlock": "0.0.0.0/0",
-                "PortRange": {
-                    "From": "8080",
-                    "To": "8080"
-                }
-            }
-        },
-        "OutBoundHTTPSNetworkAclEntry": {
-            "Type": "AWS::EC2::NetworkAclEntry",
-            "Properties": {
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                },
-                "RuleNumber": "101",
-                "Protocol": "6",
-                "RuleAction": "allow",
-                "Egress": "true",
-                "CidrBlock": "0.0.0.0/0",
-                "PortRange": {
-                    "From": "443",
-                    "To": "443"
-                }
-            }
-        },
-        "OutBoundResponsePortsNetworkAclEntry": {
-            "Type": "AWS::EC2::NetworkAclEntry",
-            "Properties": {
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                },
-                "RuleNumber": "102",
-                "Protocol": "6",
-                "RuleAction": "allow",
-                "Egress": "true",
-                "CidrBlock": "0.0.0.0/0",
-                "PortRange": {
-                    "From": "1024",
-                    "To": "65535"
-                }
-            }
-        },
-        "SubnetNetworkAclAssociation": {
-            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-            "Properties": {
-                "SubnetId": {
-                    "Ref": "Subnet"
-                },
-                "NetworkAclId": {
-                    "Ref": "NetworkAcl"
-                }
-            }
-        },
         "JenkinsIPAddress": {
             "Type": "AWS::EC2::EIP",
             "DependsOn": "AttachGateway",
@@ -357,6 +228,19 @@
                 ]
             }
         },
+        "JenkinsVolume": {
+            "Type": "AWS::EC2::Volume",
+            "Properties": {
+                "Size": "100",
+                "AvailabilityZone": { "Fn::GetAtt": [ "Subnet", "AvailabilityZone" ] },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Jenkins persistent volume"
+                    }
+                ]
+            }
+        },
         "JenkinsEC2Instance": {
             "Type": "AWS::EC2::Instance",
             "DependsOn": "AttachGateway",
@@ -371,13 +255,19 @@
                 "Tags": [
                     {
                         "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
+                        "Value": { "Ref": "AWS::StackId" }
                     },
                     {
-                        "Key": "PythiaPurpose",
-                        "Value": "Jenkins"
+                        "Key": "Name",
+                        "Value": "Pythia Support VPC Jenkins master"
+                    },
+                    {
+                        "Key": "Purpose",
+                        "Value": "Jenkins-master"
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": "Support"
                     }
                 ],
                 "NetworkInterfaces": [
@@ -394,7 +284,24 @@
                             "Ref": "Subnet"
                         }
                     }
-                ]
+                ],
+                "Volumes": [
+                    {
+                        "VolumeId": { "Ref": "JenkinsVolume" },
+                        "Device": "/dev/sdh"
+                    }
+                ],
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash -xe\n",
+                    "# create mount point directory\n",
+                    "mkdir /var/lib/jenkins\n",
+                    "# create xfs filesystem on new volume\n",    
+                    "mkfs -t xfs /dev/xvdh\n",
+                    "# add an entry to fstab to mount Jenkins volume during boot\n",
+                    "echo \"/dev/xvdh       /var/lib/jenkins   xfs    defaults,nofail 0       2\" >> /etc/fstab\n",
+                    "# mount the volume on current boot\n",
+                    "mount -a\n"
+                ]]}}
             }
         },
         "BastionEC2Instance": {
@@ -416,8 +323,16 @@
                         }
                     },
                     {
-                        "Key": "PythiaPurpose",
+                        "Key": "Name",
+                        "Value": "Pythia Support VPC Bastion host"
+                    },
+                    {
+                        "Key": "Purpose",
                         "Value": "Bastion"
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": "Support"
                     }
                 ],
                 "NetworkInterfaces": [

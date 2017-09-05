@@ -1,0 +1,246 @@
+{
+    "Parameters": {
+        "RDSUsername": {
+            "Description": "RDS master user name",
+            "Type": "String",
+            "MinLength": "1",
+            "ConstraintDescription": "Master user name cannot be empty"
+        },
+        "RDSPassword": {
+            "Description": "RDS master user password",
+            "Type": "String",
+            "MinLength": "1",
+            "NoEcho": "true",
+            "ConstraintDescription": "Master user password cannot be empty"
+        },
+        "RDSInstanceType": {
+            "Description": "RDS instance type",
+            "Type": "String",
+            "Default": "db.t2.micro",
+            "AllowedValues": [
+                "db.m4.large",
+                "db.m4.xlarge",
+                "db.m4.2xlarge",
+                "db.m4.4xlarge",
+                "db.m4.10xlarge",
+                "db.r3.large",
+                "db.r3.xlarge",
+                "db.r3.2xlarge",
+                "db.r3.4xlarge",
+                "db.r3.8xlarge",
+                "db.t2.micro",
+                "db.t2.small",
+                "db.t2.medium",
+                "db.t2.large"
+            ],
+            "ConstraintDescription": "must be a valid RDS instance type."
+        }
+    },
+    "Resources": {
+        "DelphiVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.1.0.0/16",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC"
+                    }
+                ]
+            }
+        },
+        "Subnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "DelphiVPC"
+                },
+                "AvailabilityZone": "eu-west-1a",
+                "CidrBlock": "10.1.1.0/24",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - Subnet 1A"
+                    }
+                ]
+            }
+        },
+        "Subnet2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "DelphiVPC"
+                },
+                "AvailabilityZone": "eu-west-1b",
+                "CidrBlock": "10.1.2.0/24",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - Subnet 1B"
+                    }
+                ]
+            }
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - IG"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "DelphiVPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "RouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "DelphiVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "AWS::StackId"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - Route table"
+                    }
+                ]
+            }
+        },
+        "Route": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "SubnetRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "Subnet1"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTable"
+                }
+            }
+        },
+        "DelphiSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "DelphiVPC"
+                },
+                "GroupDescription": "Allow Postgres access",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "5432",
+                        "ToPort": "5432",
+                        "CidrIp": {
+                            "Fn::GetAtt": [ "DelphiVPC", "CidrBlock" ]
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - Subnet 1B"
+                    }
+                ]
+            }
+        },
+        "RDSSubnet": {
+            "Type" : "AWS::RDS::DBSubnetGroup",
+            "Properties" : {
+                "DBSubnetGroupDescription" : "DB Subnet for placing RDS instances inside the VPC. Requires at least two subnets due to enforced HA",
+                "SubnetIds" : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" } ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - RDS Subnets"
+                    }
+               ]
+            }
+         },
+        "ExampleRDS": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBName": "ExampleRDS",
+                "AllocatedStorage": "10",
+                "DBInstanceClass": {
+                    "Ref": "RDSInstanceType"
+                },
+                "Engine": "postgres",
+                "EngineVersion": "9.6.2",
+                "MasterUsername": { "Ref": "RDSUsername" },
+                "MasterUserPassword": { "Ref": "RDSPassword" },
+                "DBSubnetGroupName": { "Ref": "RDSSubnet" },
+                "VPCSecurityGroups": [ 
+                    { "Fn::GetAtt": ["DelphiSG", "GroupId"] }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - Example RDS"
+                    }
+                ]
+            }
+        },
+        "ExampleS3": {
+            "Type": "AWS::S3::Bucket",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "AccessControl": "Private",
+                "BucketName": "kirapythia-example-bucket"
+            }
+        }
+    },
+    "Outputs": {
+        "ExampleRDSIP": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        { "Fn::GetAtt": [ "ExampleRDS", "Endpoint.Address" ] },
+                        ":",
+                        { "Fn::GetAtt": [ "ExampleRDS", "Endpoint.Port" ] }
+                    ]
+                ]
+            },
+            "Description": "Example RDS instance connection URI"
+        },
+        "S3ExampleBucketURL" : {
+            "Value" : { "Fn::Join" : [ "", [ "https://", { "Fn::GetAtt" : [ "ExampleS3", "DomainName" ] } ] ] },
+            "Description" : "Example S3 bucket URL"
+          }
+    }
+}

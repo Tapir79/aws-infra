@@ -74,10 +74,8 @@
                 "CidrBlock": "10.0.0.0/16",
                 "Tags": [
                     {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
+                        "Key": "Name",
+                        "Value": "Support VPC"
                     }
                 ]
             }
@@ -91,10 +89,8 @@
                 "CidrBlock": "10.0.0.0/24",
                 "Tags": [
                     {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
+                        "Key": "Name",
+                        "Value": "SupportVPC - Subnet (autoassigned)"
                     }
                 ]
             }
@@ -104,10 +100,8 @@
             "Properties": {
                 "Tags": [
                     {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
+                        "Key": "Name",
+                        "Value": "SupportVPC - IG"
                     }
                 ]
             }
@@ -131,10 +125,8 @@
                 },
                 "Tags": [
                     {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
+                        "Key": "Name",
+                        "Value": "SupportVPC - RouteTable"
                     }
                 ]
             }
@@ -143,13 +135,9 @@
             "Type": "AWS::EC2::Route",
             "DependsOn": "AttachGateway",
             "Properties": {
-                "RouteTableId": {
-                    "Ref": "RouteTable"
-                },
+                "RouteTableId": { "Ref": "RouteTable" },
                 "DestinationCidrBlock": "0.0.0.0/0",
-                "GatewayId": {
-                    "Ref": "InternetGateway"
-                }
+                "GatewayId": { "Ref": "InternetGateway" }
             }
         },
         "SubnetRouteTableAssociation": {
@@ -196,10 +184,7 @@
                         "FromPort": "22",
                         "ToPort": "22",
                         "CidrIp": {
-                            "Fn::GetAtt": [
-                                "SupportVPC",
-                                "CidrBlock"
-                            ]
+                            "Fn::GetAtt": [ "SupportVPC", "CidrBlock" ]
                         }
                     },
                     {
@@ -207,6 +192,12 @@
                         "FromPort": "8080",
                         "ToPort": "8080",
                         "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "SupportVPC - Jenkins SG"
                     }
                 ]
             }
@@ -224,6 +215,12 @@
                         "FromPort": "22",
                         "ToPort": "22",
                         "CidrIp": "194.100.27.17/32"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "SupportVPC - Bastion SG"
                     }
                 ]
             }
@@ -253,10 +250,6 @@
                     "Ref": "InstanceType"
                 },
                 "Tags": [
-                    {
-                        "Key": "Application",
-                        "Value": { "Ref": "AWS::StackId" }
-                    },
                     {
                         "Key": "Name",
                         "Value": "Pythia Support VPC Jenkins master"
@@ -295,7 +288,7 @@
                     "#!/bin/bash -xe\n",
                     "# create mount point directory\n",
                     "mkdir /var/lib/jenkins\n",
-                    "# create xfs filesystem on new volume\n",    
+                    "# create xfs filesystem on new volume\n",
                     "mkfs -t xfs /dev/xvdh\n",
                     "# add an entry to fstab to mount Jenkins volume during boot\n",
                     "echo \"/dev/xvdh       /var/lib/jenkins   xfs    defaults,nofail 0       2\" >> /etc/fstab\n",

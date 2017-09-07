@@ -83,6 +83,22 @@
                 ]
             }
         },
+        "Subnet3": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "DelphiVPC"
+                },
+                "AvailabilityZone": "eu-west-1c",
+                "CidrBlock": "10.1.3.0/24",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "DelphiVPC - Subnet 1C"
+                    }
+                ]
+            }
+        },
         "InternetGateway": {
             "Type": "AWS::EC2::InternetGateway",
             "Properties": {
@@ -184,7 +200,7 @@
             "Type" : "AWS::RDS::DBSubnetGroup",
             "Properties" : {
                 "DBSubnetGroupDescription" : "DB Subnet for placing RDS instances inside the VPC. Requires at least two subnets due to enforced HA",
-                "SubnetIds" : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" } ],
+                "SubnetIds" : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" }, { "Ref" : "Subnet3" }  ],
                 "Tags": [
                     {
                         "Key": "Name",

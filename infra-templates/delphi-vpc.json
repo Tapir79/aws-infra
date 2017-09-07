@@ -222,7 +222,7 @@
                 "MasterUsername": { "Ref": "RDSUsername" },
                 "MasterUserPassword": { "Ref": "RDSPassword" },
                 "DBSubnetGroupName": { "Ref": "RDSSubnet" },
-                "VPCSecurityGroups": [ 
+                "VPCSecurityGroups": [
                     { "Fn::GetAtt": ["DelphiSG", "GroupId"] }
                 ],
                 "Tags": [

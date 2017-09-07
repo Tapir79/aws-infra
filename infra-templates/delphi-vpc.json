@@ -1,4 +1,6 @@
 {
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Runtime environment, networking and data store definitions.",
     "Parameters": {
         "RDSUsername": {
             "Description": "RDS master user name",

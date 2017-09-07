@@ -1,4 +1,6 @@
 {
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Build infrastructure and elements dealing with administrative access.",
     "Parameters": {
         "SupportVPCKeyName": {
             "Description": "The EC2 Key Pair to allow SSH access to the instance",

@@ -163,17 +163,7 @@
                 }
             }
         },
-        "BastionIPAddress": {
-            "Type": "AWS::EC2::EIP",
-            "DependsOn": "AttachGateway",
-            "Properties": {
-                "Domain": "vpc",
-                "InstanceId": {
-                    "Ref": "BastionEC2Instance"
-                }
-            }
-        },
-        "JenkinsSG": {
+                "JenkinsSG": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
                 "VpcId": {
@@ -200,41 +190,6 @@
                     {
                         "Key": "Name",
                         "Value": "SupportVPC - Jenkins SG"
-                    }
-                ]
-            }
-        },
-        "BastionSG": {
-            "Type": "AWS::EC2::SecurityGroup",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "SupportVPC"
-                },
-                "GroupDescription": "Enable SSH access for Bastion",
-                "SecurityGroupIngress": [
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": "194.100.27.17/32"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": "188.117.22.59/32"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": "213.214.136.59/32"
-                    }
-                ],
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "SupportVPC - Bastion SG"
                     }
                 ]
             }
@@ -311,65 +266,9 @@
                 ]]}}
             }
         },
-        "BastionEC2Instance": {
-            "Type": "AWS::EC2::Instance",
-            "DependsOn": "AttachGateway",
-            "Properties": {
-                "KeyName": {
-                    "Ref": "SupportVPCKeyName"
-                },
-                "ImageId": "ami-0d063c6b",
-                "InstanceType": {
-                    "Ref": "InstanceType"
-                },
-                "Tags": [
-                    {
-                        "Key": "Application",
-                        "Value": {
-                            "Ref": "AWS::StackId"
-                        }
-                    },
-                    {
-                        "Key": "Name",
-                        "Value": "Pythia Support VPC Bastion host"
-                    },
-                    {
-                        "Key": "Purpose",
-                        "Value": "Bastion"
-                    },
-                    {
-                        "Key": "Environment",
-                        "Value": "Support"
-                    }
-                ],
-                "NetworkInterfaces": [
-                    {
-                        "GroupSet": [
-                            {
-                                "Ref": "BastionSG"
-                            }
-                        ],
-                        "AssociatePublicIpAddress": "true",
-                        "DeviceIndex": "0",
-                        "DeleteOnTermination": "true",
-                        "SubnetId": {
-                            "Ref": "Subnet"
-                        }
-                    }
-                ]
-            }
-        }
+
     },
     "Outputs": {
-        "BastionHostIP": {
-            "Value": {
-                "Fn::GetAtt": [
-                    "BastionEC2Instance",
-                    "PublicIp"
-                ]
-            },
-            "Description": "Bastion host IP, use this for SSH"
-        },
         "JenkinsPublicAddress": {
             "Value": {
                 "Fn::Join": [

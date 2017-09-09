@@ -191,7 +191,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "DelphiVPC - Subnet 1B"
+                        "Value": "DelphiVPC - SG"
                     }
                 ]
             }

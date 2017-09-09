@@ -6,6 +6,18 @@
             "Description": "The EC2 Key Pair to allow SSH access to the instance",
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
+        "HostVPC": {
+            "Description": "Host VPC to setup Jenkins hosts into",
+            "Type": "AWS::EC2::VPC::Id"
+        },
+        "HostCIDR": {
+            "Description": "Host VPC CIDR",
+            "Type": "String"
+        },
+        "HostSubnet": {
+            "Description": "Host VPC Subnet to associate Jenkins into",
+            "Type": "AWS::EC2::Subnet::Id"
+        },
         "InstanceType": {
             "Description": "WebServer EC2 instance type",
             "Type": "String",
@@ -70,92 +82,8 @@
         }
     },
     "Resources": {
-        "SupportVPC": {
-            "Type": "AWS::EC2::VPC",
-            "Properties": {
-                "CidrBlock": "10.0.0.0/16",
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "Support VPC"
-                    }
-                ]
-            }
-        },
-        "Subnet": {
-            "Type": "AWS::EC2::Subnet",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "SupportVPC"
-                },
-                "CidrBlock": "10.0.0.0/24",
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "SupportVPC - Subnet (autoassigned)"
-                    }
-                ]
-            }
-        },
-        "InternetGateway": {
-            "Type": "AWS::EC2::InternetGateway",
-            "Properties": {
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "SupportVPC - IG"
-                    }
-                ]
-            }
-        },
-        "AttachGateway": {
-            "Type": "AWS::EC2::VPCGatewayAttachment",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "SupportVPC"
-                },
-                "InternetGatewayId": {
-                    "Ref": "InternetGateway"
-                }
-            }
-        },
-        "RouteTable": {
-            "Type": "AWS::EC2::RouteTable",
-            "Properties": {
-                "VpcId": {
-                    "Ref": "SupportVPC"
-                },
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "SupportVPC - RouteTable"
-                    }
-                ]
-            }
-        },
-        "IGRoute": {
-            "Type": "AWS::EC2::Route",
-            "DependsOn": "AttachGateway",
-            "Properties": {
-                "RouteTableId": { "Ref": "RouteTable" },
-                "DestinationCidrBlock": "0.0.0.0/0",
-                "GatewayId": { "Ref": "InternetGateway" }
-            }
-        },
-        "SubnetRouteTableAssociation": {
-            "Type": "AWS::EC2::SubnetRouteTableAssociation",
-            "Properties": {
-                "SubnetId": {
-                    "Ref": "Subnet"
-                },
-                "RouteTableId": {
-                    "Ref": "RouteTable"
-                }
-            }
-        },
         "JenkinsIPAddress": {
             "Type": "AWS::EC2::EIP",
-            "DependsOn": "AttachGateway",
             "Properties": {
                 "Domain": "vpc",
                 "InstanceId": {
@@ -163,21 +91,19 @@
                 }
             }
         },
-                "JenkinsSG": {
+        "JenkinsSG": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
                 "VpcId": {
-                    "Ref": "SupportVPC"
+                    "Ref": "HostVPC"
                 },
-                "GroupDescription": "Enable SSH and HTTP access for Jenkins",
+                "GroupDescription": "Enable SSH access to Jenkins from host VPC and HTTP from anywhere",
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": {
-                            "Fn::GetAtt": [ "SupportVPC", "CidrBlock" ]
-                        }
+                        "CidrIp": { "Ref": "HostCIDR" }
                     },
                     {
                         "IpProtocol": "tcp",
@@ -189,27 +115,13 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "SupportVPC - Jenkins SG"
-                    }
-                ]
-            }
-        },
-        "JenkinsVolume": {
-            "Type": "AWS::EC2::Volume",
-            "Properties": {
-                "Size": "100",
-                "AvailabilityZone": { "Fn::GetAtt": [ "Subnet", "AvailabilityZone" ] },
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "Jenkins persistent volume"
+                        "Value": "Jenkins - Whitelisting SG"
                     }
                 ]
             }
         },
         "JenkinsEC2Instance": {
             "Type": "AWS::EC2::Instance",
-            "DependsOn": "AttachGateway",
             "Properties": {
                 "KeyName": {
                     "Ref": "SupportVPCKeyName"
@@ -243,14 +155,8 @@
                         "DeviceIndex": "0",
                         "DeleteOnTermination": "true",
                         "SubnetId": {
-                            "Ref": "Subnet"
+                            "Ref": "HostSubnet"
                         }
-                    }
-                ],
-                "Volumes": [
-                    {
-                        "VolumeId": { "Ref": "JenkinsVolume" },
-                        "Device": "/dev/sdh"
                     }
                 ],
                 "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
@@ -266,7 +172,27 @@
                 ]]}}
             }
         },
-
+        "JenkinsVolume": {
+            "Type": "AWS::EC2::Volume",
+            "Properties": {
+                "Size": "100",
+                "AvailabilityZone": { "Fn::GetAtt": [ "JenkinsEC2Instance", "AvailabilityZone" ] },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Jenkins persistent volume"
+                    }
+                ]
+            }
+        },
+        "JenkinsVolumeMount": {
+            "Type" : "AWS::EC2::VolumeAttachment",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "JenkinsEC2Instance" },
+                "VolumeId"  : { "Ref" : "JenkinsVolume" },
+                "Device" : "/dev/sdh"
+            }
+        }
     },
     "Outputs": {
         "JenkinsPublicAddress": {

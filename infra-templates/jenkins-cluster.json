@@ -1,0 +1,216 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Build infrastructure and elements dealing with administrative access.",
+    "Parameters": {
+        "SupportVPCKeyName": {
+            "Description": "The EC2 Key Pair to allow SSH access to the instance",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "HostVPC": {
+            "Description": "Host VPC to setup Jenkins hosts into",
+            "Type": "AWS::EC2::VPC::Id"
+        },
+        "HostCIDR": {
+            "Description": "Host VPC CIDR",
+            "Type": "String"
+        },
+        "HostSubnet": {
+            "Description": "Host VPC Subnet to associate Jenkins into",
+            "Type": "AWS::EC2::Subnet::Id"
+        },
+        "InstanceType": {
+            "Description": "WebServer EC2 instance type",
+            "Type": "String",
+            "Default": "t2.small",
+            "AllowedValues": [
+                "t1.micro",
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "m1.small",
+                "m1.medium",
+                "m1.large",
+                "m1.xlarge",
+                "m2.xlarge",
+                "m2.2xlarge",
+                "m2.4xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "c1.medium",
+                "c1.xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "g2.2xlarge",
+                "g2.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "d2.xlarge",
+                "d2.2xlarge",
+                "d2.4xlarge",
+                "d2.8xlarge",
+                "hi1.4xlarge",
+                "hs1.8xlarge",
+                "cr1.8xlarge",
+                "cc2.8xlarge",
+                "cg1.4xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type."
+        }
+    },
+    "Resources": {
+        "JenkinsIPAddress": {
+            "Type": "AWS::EC2::EIP",
+            "Properties": {
+                "Domain": "vpc",
+                "InstanceId": {
+                    "Ref": "JenkinsEC2Instance"
+                }
+            }
+        },
+        "JenkinsSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "HostVPC"
+                },
+                "GroupDescription": "Enable SSH access to Jenkins from host VPC and HTTP from anywhere",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": { "Ref": "HostCIDR" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Jenkins - Whitelisting SG"
+                    }
+                ]
+            }
+        },
+        "JenkinsEC2Instance": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "KeyName": {
+                    "Ref": "SupportVPCKeyName"
+                },
+                "ImageId": "ami-0d063c6b",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Pythia Support VPC Jenkins master"
+                    },
+                    {
+                        "Key": "Purpose",
+                        "Value": "Jenkins-master"
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": "Support"
+                    }
+                ],
+                "NetworkInterfaces": [
+                    {
+                        "GroupSet": [
+                            {
+                                "Ref": "JenkinsSG"
+                            }
+                        ],
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": "0",
+                        "DeleteOnTermination": "true",
+                        "SubnetId": {
+                            "Ref": "HostSubnet"
+                        }
+                    }
+                ],
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash -xe\n",
+                    "# create mount point directory\n",
+                    "mkdir /var/lib/jenkins\n",
+                    "# create xfs filesystem on new volume\n",
+                    "mkfs -t xfs /dev/xvdh\n",
+                    "# add an entry to fstab to mount Jenkins volume during boot\n",
+                    "echo \"/dev/xvdh       /var/lib/jenkins   xfs    defaults,nofail 0       2\" >> /etc/fstab\n",
+                    "# mount the volume on current boot\n",
+                    "mount -a\n"
+                ]]}}
+            }
+        },
+        "JenkinsVolume": {
+            "Type": "AWS::EC2::Volume",
+            "Properties": {
+                "Size": "100",
+                "AvailabilityZone": { "Fn::GetAtt": [ "JenkinsEC2Instance", "AvailabilityZone" ] },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Jenkins persistent volume"
+                    }
+                ]
+            }
+        },
+        "JenkinsVolumeMount": {
+            "Type" : "AWS::EC2::VolumeAttachment",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "JenkinsEC2Instance" },
+                "VolumeId"  : { "Ref" : "JenkinsVolume" },
+                "Device" : "/dev/sdh"
+            }
+        }
+    },
+    "Outputs": {
+        "JenkinsPublicAddress": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        { "Fn::GetAtt": [ "JenkinsEC2Instance", "PublicIp" ] },
+                        ":8080"
+                    ]
+                ]
+            },
+            "Description": "Jenkins public address"
+        },
+        "JenkinsInternalIP": {
+            "Value": { "Fn::GetAtt": [ "JenkinsEC2Instance", "PrivateIp" ] },
+            "Description": "Use for testing SSH"
+        }
+    }
+}

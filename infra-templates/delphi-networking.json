@@ -2,8 +2,8 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Runtime environment, networking and data store definitions.",
     "Parameters": {
-        "SupportVPCKeyName": {
-            "Description": "The EC2 Key Pair to allow SSH access to the instance",
+        "DelphiKeyName": {
+            "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
         "BastionInstanceType": {
@@ -175,12 +175,22 @@
         "SubnetRouteTableAssociation": {
             "Type": "AWS::EC2::SubnetRouteTableAssociation",
             "Properties": {
-                "SubnetId": {
-                    "Ref": "Subnet1"
-                },
-                "RouteTableId": {
-                    "Ref": "RouteTable"
-                }
+                "SubnetId": { "Ref": "Subnet1" },
+                "RouteTableId": { "Ref": "RouteTable" }
+            }
+        },
+        "Subnet2RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": { "Ref": "Subnet2" },
+                "RouteTableId": { "Ref": "RouteTable" }
+            }
+        },
+        "Subnet3RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": { "Ref": "Subnet3" },
+                "RouteTableId": { "Ref": "RouteTable" }
             }
         },
         "DelphiSG": {
@@ -195,6 +205,14 @@
                         "IpProtocol": "tcp",
                         "FromPort": "5432",
                         "ToPort": "5432",
+                        "CidrIp": {
+                            "Fn::GetAtt": [ "DelphiVPC", "CidrBlock" ]
+                        }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
                         "CidrIp": {
                             "Fn::GetAtt": [ "DelphiVPC", "CidrBlock" ]
                         }
@@ -292,7 +310,7 @@
             "DependsOn": "AttachGateway",
             "Properties": {
                 "KeyName": {
-                    "Ref": "SupportVPCKeyName"
+                    "Ref": "DelphiKeyName"
                 },
                 "ImageId": "ami-0d063c6b",
                 "InstanceType": {

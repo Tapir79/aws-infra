@@ -29,3 +29,5 @@ These CF templates require administrator access to AWS Management Console.
     ```
     Replace `<BASTION_IP_HERE>` with IP in the `Outputs` section of the `delphi-networking` CloudFormation Stack labeled _"BastionHostIP"_
  1. Execute [infra-provisioning](../infra-provisioning/) playbook as described in its README.
+
+    > This configuration file is usually located at path `~/.ssh/config`. However depending on your OS/environment the actual path may differ.

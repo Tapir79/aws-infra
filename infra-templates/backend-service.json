@@ -1,0 +1,30 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Resources for backend service",
+    "Parameters": {
+
+    },
+    "Resources": {
+        "DockerRegistry": {
+            "Type": "AWS::ECR::Repository",
+            "Properties": {
+                "RepositoryName": "backend"
+            }
+        }
+    },
+    "Outputs": {
+        "ECR": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        { "Ref": "AWS::AccountId" },
+                        ".dkr.ecr.eu-west-1.amazonaws.com/",
+                        { "Ref" : "DockerRegistry" }
+                    ]
+                ]
+            },
+            "Description": "ECR registry base URI"
+        }
+    }
+}

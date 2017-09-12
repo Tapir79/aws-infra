@@ -26,7 +26,7 @@ All software provisioning is done with [Ansible](https://www.ansible.com/).
     
     During execution you may see something similar to following a few times:
     
-    > The authenticity of host '52.16.211.132 (52.16.211.132)' can't be established.
+    > The authenticity of host '12.34.56.78 (12.34.56.78)' can't be established.
     >  ECDSA key fingerprint is SHA256:UG81jtF5S8vsJNmmTtvpOkPAprk3+OqgVxkYN7vs4+Q.
     >  Are you sure you want to continue connecting (yes/no)?
     

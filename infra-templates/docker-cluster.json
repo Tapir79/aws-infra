@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Docker cluster configuration",
+    "Description": "Docker based runtime environment for Pythia",
     "Parameters": {
         "SupportVPCKeyName": {
             "Description": "The EC2 Key Pair to allow SSH access to the instance",

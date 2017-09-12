@@ -25,6 +25,10 @@
 
   roles:
    - { role: ansiblebit.oracle-java, oracle_java_set_as_default: yes }  # Install latest Oracle JDK
+   - docker_host
+
+  environment:
+     QA_DOCKER_REGISTRY: 873066765040.dkr.ecr.eu-west-1.amazonaws.com/pythia-qa-registry
 
   tasks:
    - name: Install all build related tools needed for Pythia development
@@ -79,8 +83,11 @@
 
    - name: Set Jenkins JVM options
      lineinfile: dest=/etc/sysconfig/jenkins
-                 regexp='^JENKINS_JAVA_OPTION='
+                 regexp='^JENKINS_JAVA_OPTIONS='
                  line=JENKINS_JAVA_OPTIONS="-server -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true"
+
+   - name: Add user 'jenkins' to group 'docker'
+     user: name=centos group=docker
 
    - name: Enable Jenkins start on boot and start the service
      service: name=jenkins state=started enabled=yes
@@ -90,33 +97,9 @@
   become: true
   become_user: root
 
+  roles:
+   - role: docker_host
+
   tasks:
-   # this uses yum-config-manager directly as it is not exposed through Ansible modules
-   - name: Add Docker CE stable YUM repository
-     command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-
-   - name: Ensure the yum package index is up to Date
-     yum:
-       update_cache: yes
-       name: '*'
-       state: latest
-
-   - name: Install Docker prerequisites
-     yum: name={{item}} state=present update_cache=yes
-     with_items:
-      - yum-utils
-      - device-mapper-persistent-data
-      - lvm2
-
-   - name: Install Docker CE
-     yum: name=docker-ce state=present
-
-   - name: Enable Docker CE start on boot and start the service
-     service: name=docker state=started enabled=yes
-
-   - name: Create group 'docker'
-     group: name=docker
-            state=present
-
    - name: Add user 'centos' to group 'docker'
      user: name=centos group=docker

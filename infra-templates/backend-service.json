@@ -50,7 +50,7 @@
         "DockerRegistry": {
             "Type": "AWS::ECR::Repository",
             "Properties": {
-                "RepositoryName": "backend"
+                "RepositoryName": "pythia-backend"
             }
         },
         "BackendRDS": {

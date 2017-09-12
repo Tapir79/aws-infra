@@ -13,41 +13,6 @@
             "AllowedValues": [ "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"
             ],
             "ConstraintDescription": "must be a valid EC2 instance type."
-        },
-        "RDSUsername": {
-            "Description": "RDS master user name",
-            "Type": "String",
-            "MinLength": "1",
-            "ConstraintDescription": "Master user name cannot be empty"
-        },
-        "RDSPassword": {
-            "Description": "RDS master user password",
-            "Type": "String",
-            "MinLength": "1",
-            "NoEcho": "true",
-            "ConstraintDescription": "Master user password cannot be empty"
-        },
-        "RDSInstanceType": {
-            "Description": "RDS instance type",
-            "Type": "String",
-            "Default": "db.t2.micro",
-            "AllowedValues": [
-                "db.m4.large",
-                "db.m4.xlarge",
-                "db.m4.2xlarge",
-                "db.m4.4xlarge",
-                "db.m4.10xlarge",
-                "db.r3.large",
-                "db.r3.xlarge",
-                "db.r3.2xlarge",
-                "db.r3.4xlarge",
-                "db.r3.8xlarge",
-                "db.t2.micro",
-                "db.t2.small",
-                "db.t2.medium",
-                "db.t2.large"
-            ],
-            "ConstraintDescription": "must be a valid RDS instance type."
         }
     },
     "Resources": {
@@ -257,30 +222,6 @@
                ]
             }
          },
-        "ExampleRDS": {
-            "Type": "AWS::RDS::DBInstance",
-            "Properties": {
-                "DBName": "ExampleRDS",
-                "AllocatedStorage": "10",
-                "DBInstanceClass": {
-                    "Ref": "RDSInstanceType"
-                },
-                "Engine": "postgres",
-                "EngineVersion": "9.6.2",
-                "MasterUsername": { "Ref": "RDSUsername" },
-                "MasterUserPassword": { "Ref": "RDSPassword" },
-                "DBSubnetGroupName": { "Ref": "RDSSubnet" },
-                "VPCSecurityGroups": [
-                    { "Fn::GetAtt": ["DelphiSG", "GroupId"] }
-                ],
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "DelphiVPC - Example RDS"
-                    }
-                ]
-            }
-        },
         "ExampleS3": {
             "Type": "AWS::S3::Bucket",
             "DeletionPolicy": "Retain",
@@ -358,22 +299,12 @@
             },
             "Description": "Bastion host IP, use this for SSH"
         },
-        "ExampleRDSIP": {
-            "Value": {
-                "Fn::Join": [
-                    "",
-                    [
-                        { "Fn::GetAtt": [ "ExampleRDS", "Endpoint.Address" ] },
-                        ":",
-                        { "Fn::GetAtt": [ "ExampleRDS", "Endpoint.Port" ] }
-                    ]
-                ]
-            },
-            "Description": "Example RDS instance connection URI"
-        },
         "S3ExampleBucketURL" : {
             "Value" : { "Fn::Join" : [ "", [ "https://", { "Fn::GetAtt" : [ "ExampleS3", "DomainName" ] } ] ] },
             "Description" : "Example S3 bucket URL"
+        },
+        "RDSSubnet": {
+            "Value": { "Ref": "RDSSubnet" }
         }
     }
 }

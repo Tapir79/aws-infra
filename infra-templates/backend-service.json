@@ -2,7 +2,49 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Resources for backend service",
     "Parameters": {
-
+        "HostSG": {
+            "Description": "Select host VPC's SecurityGroup",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "HostRDSSubnet": {
+            "Description": "Select host VPC's RDS Subnet listed at https://eu-west-1.console.aws.amazon.com/rds/home?region=eu-west-1#db-subnet-groups:",
+            "Type": "String"
+        },
+        "RDSUsername": {
+            "Description": "RDS master user name",
+            "Type": "String",
+            "MinLength": "1",
+            "ConstraintDescription": "Master user name cannot be empty"
+        },
+        "RDSPassword": {
+            "Description": "RDS master user password",
+            "Type": "String",
+            "MinLength": "1",
+            "NoEcho": "true",
+            "ConstraintDescription": "Master user password cannot be empty"
+        },
+        "RDSInstanceType": {
+            "Description": "RDS instance type",
+            "Type": "String",
+            "Default": "db.t2.micro",
+            "AllowedValues": [
+                "db.m4.large",
+                "db.m4.xlarge",
+                "db.m4.2xlarge",
+                "db.m4.4xlarge",
+                "db.m4.10xlarge",
+                "db.r3.large",
+                "db.r3.xlarge",
+                "db.r3.2xlarge",
+                "db.r3.4xlarge",
+                "db.r3.8xlarge",
+                "db.t2.micro",
+                "db.t2.small",
+                "db.t2.medium",
+                "db.t2.large"
+            ],
+            "ConstraintDescription": "must be a valid RDS instance type."
+        }
     },
     "Resources": {
         "DockerRegistry": {
@@ -10,7 +52,31 @@
             "Properties": {
                 "RepositoryName": "backend"
             }
-        }
+        },
+        "BackendRDS": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBName": "pythia",
+                "AllocatedStorage": "10",
+                "DBInstanceClass": {
+                    "Ref": "RDSInstanceType"
+                },
+                "Engine": "postgres",
+                "EngineVersion": "9.6.2",
+                "MasterUsername": { "Ref": "RDSUsername" },
+                "MasterUserPassword": { "Ref": "RDSPassword" },
+                "DBSubnetGroupName": { "Ref": "HostRDSSubnet" },
+                "VPCSecurityGroups": [
+                    { "Ref": "HostSG" }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "backend-service RDS"
+                    }
+                ]
+            }
+        },
     },
     "Outputs": {
         "ECR": {
@@ -25,6 +91,19 @@
                 ]
             },
             "Description": "ECR registry base URI"
+        },
+        "ExampleRDSIP": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        { "Fn::GetAtt": [ "BackendRDS", "Endpoint.Address" ] },
+                        ":",
+                        { "Fn::GetAtt": [ "BackendRDS", "Endpoint.Port" ] }
+                    ]
+                ]
+            },
+            "Description": "Example RDS instance connection URI"
         }
     }
 }

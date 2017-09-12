@@ -169,7 +169,59 @@
                     "echo \"/dev/xvdh       /var/lib/jenkins   xfs    defaults,nofail 0       2\" >> /etc/fstab\n",
                     "# mount the volume on current boot\n",
                     "mount -a\n"
-                ]]}}
+                ]]}},
+                "IamInstanceProfile": { "Ref": "JenkinsProfile" }
+            }
+        },
+        "JenkinsRolePolicies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "root",
+                "PolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [ {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ecr:GetAuthorizationToken",
+                            "ecr:BatchCheckLayerAvailability",
+                            "ecr:GetDownloadUrlForLayer",
+                            "ecr:GetRepositoryPolicy",
+                            "ecr:DescribeRepositories",
+                            "ecr:ListImages",
+                            "ecr:DescribeImages",
+                            "ecr:BatchGetImage",
+                            "ecr:InitiateLayerUpload",
+                            "ecr:UploadLayerPart",
+                            "ecr:CompleteLayerUpload",
+                            "ecr:PutImage"
+                        ],
+                        "Resource": "*"
+                    } ]
+                },
+                "Roles": [ { "Ref": "JenkinsRole" } ]
+            }
+        },
+        "JenkinsRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [ {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": [ "ec2.amazonaws.com" ]
+                        },
+                        "Action": [ "sts:AssumeRole" ]
+                    } ]
+                },
+                "Path": "/"
+            }
+        },
+        "JenkinsProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [ { "Ref": "JenkinsRole" } ]
             }
         },
         "JenkinsVolume": {

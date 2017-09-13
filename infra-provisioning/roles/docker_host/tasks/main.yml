@@ -1,0 +1,28 @@
+---
+# this uses yum-config-manager directly as it is not exposed through Ansible modules
+- name: Add Docker CE stable YUM repository
+  command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+- name: Ensure the yum package index is up to Date
+  yum:
+    update_cache: yes
+    name: '*'
+    state: latest
+
+- name: Install Docker prerequisites
+  yum: name={{item}} state=present update_cache=yes
+  with_items:
+   - yum-utils
+   - device-mapper-persistent-data
+   - lvm2
+
+- name: Install Docker CE
+  yum: name=docker-ce state=present
+
+- name: Enable Docker CE start on boot and start the service
+  service: name=docker state=started enabled=yes
+
+- name: Create group 'docker'
+  group: name=docker
+        state=present
+
